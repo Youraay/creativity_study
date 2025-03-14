@@ -45,4 +45,6 @@ class DataFactory():
         return self.mongo.insert_item_into_collection('imgs', img)
     
     def insert_many_seeds(self, seeds: list) -> bool:
-        return self.mongo.get_collection('seeds').insert_many(seeds)
+        print(seeds)
+        result = self.mongo.get_collection('seeds').insert_many(seeds)
+        return bool(result.inserted_ids)

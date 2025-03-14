@@ -1,6 +1,6 @@
 from data_model import Seed
-import datetime
-
+import time
+from datetime import datetime
 class SeedGeneration():
 
 
@@ -27,9 +27,8 @@ class SeedGeneration():
                 "_id": (i*(2**bit)//n),
                 "seed": (i*(2**bit)//n),
                 "generated_images": [],
-                "created_at": datetime.now()
+                "created_at": datetime.now().isoformat()
             }
-            seed = Seed(seed_dict)
-            list.append(seed)
+            list.append(seed_dict)
 
-        return self.seed_list
+        return list
