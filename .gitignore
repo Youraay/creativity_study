@@ -1,0 +1,53 @@
+# Virtuelle Umgebung
+.venv/
+venv/
+env/
+
+# Python Bytecode-Dateien
+*.pyc
+*.pyo
+__pycache__/
+
+# IDE-spezifische Dateien (VSCode, PyCharm, JetBrains)
+.vscode/
+.idea/
+*.iml
+
+# Paketverwaltungsdateien
+Pipfile.lock
+poetry.lock
+requirements.txt
+
+# Test- und Coverage-Daten
+nosetests.xml
+coverage.xml
+*.cover
+*.hypothesis/
+
+# Sonstige temporäre Dateien
+*.log
+*.pot
+*.mo
+*.swp
+.DS_Store
+
+# Stable Diffusion generierte Bilder (falls du sie nicht versionieren willst)
+output_images/
+generated_images/
+*.png
+*.jpg
+*.jpeg
+
+# Datenbank-Daten (MongoDB Docker-Volumes)
+mongodb_data/
+dump/
+
+# Docker spezifische Dateien
+docker-compose.override.yml
+.env
+.envrc
+
+# Node.js/Frontend (falls dein Web-Frontend z. B. React ist)
+node_modules/
+dist/
+build/
