@@ -16,7 +16,6 @@ __pycache__/
 # Paketverwaltungsdateien
 Pipfile.lock
 poetry.lock
-requirements.txt
 
 # Test- und Coverage-Daten
 nosetests.xml
