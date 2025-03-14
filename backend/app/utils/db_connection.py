@@ -12,10 +12,22 @@ class MongoDB():
 
         return self.client[db]
     
-    def change_database(self, db='sample_database'):
-            self.db = self.client[db]
-
     def get_collection(self, collection):
          
         return self.db[collection]
 
+    def get_item_from_collection_by_id(self, collection:str, id:str) -> dict:
+        return self.get_collection(collection).find_one({"_id": id})
+    
+    def get_items_from_collection_by_attr(self, collection:str, attr:str, value:str) -> dict:
+        return self.get_collection(collection).find({attr: value})
+    
+    def insert_item_into_collection(self, collection:str, item:dict) -> bool:
+        return bool(self.get_collection(collection).insert_one(item))
+    
+    
+    def update_item_in_collection_by_id(self, collection:str, id:str, item:dict)-> bool:
+        return bool(self.get_collection(collection).update_one({"_id":id}, {"$set": item}))
+    
+    def update_items_in_collection(self, collection:str, query:dict, item:dict)-> bool:
+        return bool(self.get_collection(collection).update_many(query, {"$set":item}))
