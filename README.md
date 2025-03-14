@@ -1,1 +1,1 @@
-# diffusion-creativity-optimization-study
+# creativity-study
