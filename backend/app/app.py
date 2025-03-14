@@ -7,4 +7,4 @@ if __name__ == "__main__":
     seedGen = SeedGeneration()
 
     seeds = seedGen.generate_evenly_distributed_seeds(n=1000, bit=32)
-    dF.insert_many_seeds(seeds)
+    dF.insert_many_seeds(seeds) 
