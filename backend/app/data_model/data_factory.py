@@ -46,5 +46,5 @@ class DataFactory():
     
     def insert_many_seeds(self, seeds: list) -> bool:
         print(seeds)
-        result = self.mongo.get_collection('seeds').insert_many(seeds)
+        result = self.mongo.insert_many_items_into_collection('seeds', seeds)
         return bool(result.inserted_ids)

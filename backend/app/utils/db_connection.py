@@ -4,7 +4,7 @@ class MongoDB():
 
     def __init__(self):
 
-        CONNECTION_STRING = "mongodb://admin:secret@192.168.0.2:27017/"
+        CONNECTION_STRING = "mongodb://admin:secret@localhost:27017/"
         self.client = MongoClient(CONNECTION_STRING)
         self.db = self.client['sample_database']
         
@@ -25,6 +25,8 @@ class MongoDB():
     def insert_item_into_collection(self, collection:str, item:dict) -> bool:
         return bool(self.get_collection(collection).insert_one(item))
     
+    def insert_many_items_into_collection(self, collection:str, items:list) -> bool:
+        return bool(self.get_collection(collection).insert_many(items))
     
     def update_item_in_collection_by_id(self, collection:str, id:str, item:dict)-> bool:
         return bool(self.get_collection(collection).update_one({"_id":id}, {"$set": item}))
