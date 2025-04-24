@@ -7,3 +7,9 @@ torch
 pymongo
 python-dateutil
 pandas
+scikit-learn
+torchvision
+statistic
+matplotlib
+seaborn
+scikit-image

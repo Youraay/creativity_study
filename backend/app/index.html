@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Image Gallery</title>
+<style>
+:root {
+  --gap: 1rem;
+  --card-radius: 1rem;
+  --shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f9fafb;
+  color: #111;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  padding: var(--gap);
+  background:#fff;
+  position: sticky;
+  top:0;
+  z-index: 10;
+  box-shadow: var(--shadow);
+}
+header input, header select {
+  padding: .5rem .75rem;
+  border: 1px solid #d1d5db;
+  border-radius: .5rem;
+  font-size: 1rem;
+}
+#gallery {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+  padding: var(--gap);
+}
+.card {
+  background:#fff;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
+}
+.card img {
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+.card .info {
+  padding: .75rem;
+  font-size: .875rem;
+  line-height: 1.25;
+}
+.card .sub {
+  color:#6b7280;
+  font-size: .75rem;
+}
+#lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+#lightbox.open {
+  opacity: 1;
+  pointer-events: all;
+}
+#lightbox .content {
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  background:#fff;
+  border-radius: var(--card-radius);
+}
+#lightbox img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-bottom: 1px solid #e5e7eb;
+}
+#lightbox .meta {
+  padding: 1rem;
+  font-size: .875rem;
+}
+#lightbox .close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color:#fff;
+  font-size: 2rem;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<header>
+  <input type="search" id="search" placeholder="Suche nach ID oder Prompt..." />
+  <select id="promptFilter">
+    <option value="">Alle Prompts</option>
+  </select>
+</header>
+<main id="gallery" aria-live="polite"></main>
+
+<div id="lightbox" aria-hidden="true">
+  <div class="content">
+    <button class="close" aria-label="Schließen">&times;</button>
+    <img id="lb-img" alt="">
+    <div class="meta" id="lb-meta"></div>
+  </div>
+</div>
+
+<script>
+// ---- Konfiguration ----
+const API_BASE = ''; // anpassen wenn Backend auf anderem Host/Port läuft
+
+// --- DOM refs ---
+const gallery = document.getElementById('gallery');
+const searchInput = document.getElementById('search');
+const promptSelect = document.getElementById('promptFilter');
+const lightbox = document.getElementById('lightbox');
+const lbImg = document.getElementById('lb-img');
+const lbMeta = document.getElementById('lb-meta');
+const closeBtn = document.querySelector('#lightbox .close');
+
+let images = [];
+let prompts = new Map(); // prompt_id -> prompt_text
+
+// ---- Daten laden ----
+Promise.all([
+  fetch(API_BASE + '/api/images').then(r=>r.json()),
+  fetch(API_BASE + '/api/prompts').then(r=>r.json())
+]).then(([imgData, promptData])=>{
+  images = imgData;
+  promptData.forEach(p=>prompts.set(p._id, p.prompt));
+  buildPromptOptions(promptData);
+  renderGallery();
+}).catch(err=>{
+  console.error(err);
+  gallery.innerHTML = '<p style="color:red">Fehler beim Laden der Daten</p>';
+});
+
+// ---- UI bauen ----
+function buildPromptOptions(data){
+  const frag = document.createDocumentFragment();
+  data.forEach(p=>{
+    const o = document.createElement('option');
+    o.value = p._id;
+    o.textContent = p.prompt;
+    frag.appendChild(o);
+  });
+  promptSelect.appendChild(frag);
+}
+
+function renderGallery(){
+  const query = searchInput.value.toLowerCase();
+  const filterPrompt = promptSelect.value;
+
+  const filtered = images.filter(img=>{
+    const matchesPrompt = filterPrompt ? img.prompt_id === filterPrompt : true;
+    const matchesQuery = query ?
+        img._id.toLowerCase().includes(query) ||
+        img.prompt_text.toLowerCase().includes(query) :
+        true;
+    return matchesPrompt && matchesQuery;
+  });
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach(img=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = img._id;
+    card.innerHTML = `
+      <img src="${API_BASE}/${img.file_path}" alt="${img.prompt_text}" loading="lazy">
+      <div class="info">
+        <div class="title">${img.prompt_text}</div>
+        <div class="sub">Seed: ${img.seed_id} • Q: ${img.quality_score.toFixed(2)} • GS: ${img.guidance_scale}</div>
+        <div class="sub">${new Date(img.creation_date).toLocaleString()}</div>
+      </div>
+    `;
+    card.addEventListener('click', ()=>openLightbox(img));
+    frag.appendChild(card);
+  });
+  gallery.innerHTML = '';
+  gallery.appendChild(frag);
+}
+
+function openLightbox(img){
+  lbImg.src = API_BASE + '/' + img.file_path;
+  lbImg.alt = img.prompt_text;
+  const promptText = prompts.get(img.prompt_id) || img.prompt_text;
+  lbMeta.innerHTML = `
+    <strong>${promptText}</strong><br>
+    Seed: ${img.seed_id}<br>
+    Schritte: ${img.generation_steps} | GS: ${img.guidance_scale}<br>
+    Qualität: ${img.quality_score.toFixed(3)} | Coherence: ${('coherence_score' in img)? img.coherence_score.toFixed(3): '–'}
+  `;
+  lightbox.classList.add('open');
+  lightbox.setAttribute('aria-hidden','false');
+}
+
+function closeLightbox(){
+  lightbox.classList.remove('open');
+  lightbox.setAttribute('aria-hidden','true');
+}
+
+searchInput.addEventListener('input', renderGallery);
+promptSelect.addEventListener('change', renderGallery);
+closeBtn.addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', e=>{ if(e.target===lightbox) closeLightbox(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeLightbox(); });
+</script>
+</body>
+</html>
