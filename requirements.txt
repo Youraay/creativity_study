@@ -1,0 +1,11 @@
+torch
+diffusers
+Pillow
+transformers
+accelerate
+torchvision
+torchmetrics
+imageio
+pytorch-lightning
+graphviz
+pytest
