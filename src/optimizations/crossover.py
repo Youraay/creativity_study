@@ -8,7 +8,7 @@ from custom_types import Latents, Argument, Noise
 class Crossover(Generic[Argument], ABC):
 
     @abstractmethod
-    def crossover(self, argument1: Argument, argument2: Argument):
+    def crossover(self, argument1: Argument, argument2: Argument) -> Argument:
         
         raise NotImplementedError("Method is not implementet yet")
     
@@ -61,15 +61,14 @@ class ArithmeticCrossover(Crossover[Noise]):
     weight : float
     proportions : float
 
-    def crossover(self, argument1: Noise, argument2: Noise):
+    def crossover(self, argument1: Noise, argument2: Noise) -> Noise:
 
-        return arithmetic_crossover(
+        return Noise(arithmetic_crossover(
             argument1.latents,
             argument2.latents,
             self.weight,
             self.proportions, 
-
-        )
+        ))
     
 @dataclass
 class UniformCrossover(Crossover[Noise]):

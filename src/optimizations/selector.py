@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, List, Dict, Any
-from custom_types import Argument, Result, Fitness
+from custom_types import Argument, Result, Fitness, Noise
 import random
 
 @dataclass
@@ -16,7 +16,7 @@ class SolutionCandidate(Generic[Argument, Result]):
 class Selector(Generic[Argument], ABC):
 
     @abstractmethod
-    def select(self, candidates: List[SolutionCandidate[Any,Any]]) -> SolutionCandidate[Any,Any]:
+    def select(self, candidates: List[Noise]) -> Noise:
 
         raise NotImplementedError("Method is not implementet yet")
 
@@ -28,7 +28,7 @@ class RankSelector(Selector[float]):
 
         self.selection_pressure = selection_pressure
 
-    def select(self, candidates: List[SolutionCandidate]) -> SolutionCandidate:
+    def select(self, candidates: List[Noise]) -> Noise:
             
             candidates.sort(key=lambda candidates: candidates.fitness, reverse=True)
             num_candicates = len(candidates)
@@ -48,13 +48,13 @@ class TournamentSelector(Selector[float]):
 
         self.tournament_size = tournament_size
 
-    def select(self, candidates: List[SolutionCandidate]) -> SolutionCandidate:
+    def select(self, candidates: List[Noise]) -> Noise:
         selected = random.sample(candidates, self.tournament_size)
         return max(selected, key=lambda candidate: candidate.fitness)
     
 class RouletteWheelSelector(Selector[float]):
     
-    def select(self, candidates: List[SolutionCandidate]) -> SolutionCandidate:
+    def select(self, candidates: List[Noise]) -> Noise:
         total_fitness = sum(candidate.fitness for candidate in candidates if candidate.fitness)
         pick = random.uniform(0,total_fitness)
         current = 0

@@ -1,12 +1,13 @@
 # types.py
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, List
 import PIL.Image
 import torch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import PIL
 type Device = str
 type Latents = torch.Tensor
 Argument = TypeVar('Argument')
+Argument2 = TypeVar('Argument2')
 Result = TypeVar('Result')
 type Fitness = float
 type Evaluation = float
@@ -17,8 +18,10 @@ class Noise():
     latents: torch.Tensor
     image_embs: torch.Tensor = torch.zeros(1)
     pil: PIL.Image.Image = PIL.Image.Image()
+    fitness: float = 0
+    scores : List[float] = field(default_factory=list)
     seed: int = 0
-    generator: Optional[torch.Generator] = None
+    generator: torch.Generator | None = None
 
     @classmethod
     def from_seed(cls, 

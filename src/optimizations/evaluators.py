@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from custom_types import Argument, Noise, Evaluation
+from custom_types import Argument,Argument2, Noise, Evaluation
 from typing import Generic
 import torch
 import torch.nn as nn
@@ -8,7 +8,7 @@ from models.manager import ModelManager
 
 class Evaluator(Generic[Argument] , ABC):
     @abstractmethod
-    def evaluate(self, noise: Argument) -> Evaluation:
+    def evaluate(self, noise: Argument, *args, **kwargs) -> Evaluation:
 
         raise NotImplementedError("Method is not implementet yet")
 
@@ -28,7 +28,7 @@ class MaxMeanDivergenceEvaluator(Evaluator[Noise]):
         inputs = self.blip_processor(images=noise.pil, return_tensors="pt")
         with torch.no_grad():
             outputs =self.blip2_model.get_image_features(**inputs)
-            blip_embs = outputs.last_hidden_state.mean(dim=1)
+            noise.image_embs = outputs.last_hidden_state.mean(dim=1)
 
         cos = F.cosine_similarity(noise.image_embs, self.mean_embds)
         similarity =cos.item()
@@ -45,10 +45,10 @@ class MaxPromptCoherenceEvaluator(Evaluator[Noise]):
                 
         self.clip_model, self.clip_processor = model_manager.load_clip()
     
-    def evaluate(self, noise: Noise, prompt: str) -> Evaluation:
+    def evaluate(self, noise: Noise, *args, **kwargs) -> Evaluation:
         
         inputs = self.clip_processor(
-            text=[prompt],
+            text=[kwargs.get("prompt")],
             images=noise.pil,
             return_tensors="pt",
             padding=True
