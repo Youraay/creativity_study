@@ -20,11 +20,12 @@ class MaxMeanDivergenceEvaluator(Evaluator[Noise]):
                 
         self.blip2_model, self.blip_processor = model_manager.load_blip2()
         
-        self.mean_embds = torch.load(f"mean_embeddings/{mean_embds_file_name}")
+        
         
 
     def evaluate(self, noise: Noise, *args, **kwargs) -> Evaluation:
-        
+        if not self.mean_embds:
+            self.mean_embds = torch.load(f"mean_embeddings/{kwargs.get("prompt")}.pt")
         inputs = self.blip_processor(images=noise.pil, return_tensors="pt")
         with torch.no_grad():
             outputs =self.blip2_model.get_image_features(**inputs)
