@@ -65,7 +65,7 @@ class GeneticOptimization():
 
     def save_images(self):
         for i, noise in enumerate(self.population):
-            filename = f"image_{self.completed_generations:02d}_{i:03d}_{noise.fitness}.png"
+            filename = f"image_{self.completed_generations:02d}_{i:03d}_{noise.fitness:4f}.png"
             path = os.path.join(self.output_path, filename)
             noise.pil.save(path)
         
@@ -109,6 +109,7 @@ class GeneticOptimization():
         return max(self.population, key=lambda noise: noise.fitness)
 
     def perform_generation(self):
+        print(self.best_solution())
         self.completed_generations += 1
         elites : List[Noise] = sorted(self.population, key= lambda noise: noise.fitness , reverse=True)[:self.elitism_count] if self.elitism_count else []
 

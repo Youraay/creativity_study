@@ -23,7 +23,7 @@ class MaxMeanDivergenceEvaluator(Evaluator[Noise]):
         self.mean_embds = torch.load(f"mean_embeddings/{mean_embds_file_name}")
         
 
-    def evaluate(self, noise: Noise) -> Evaluation:
+    def evaluate(self, noise: Noise, *args, **kwargs) -> Evaluation:
         
         inputs = self.blip_processor(images=noise.pil, return_tensors="pt")
         with torch.no_grad():
@@ -33,7 +33,7 @@ class MaxMeanDivergenceEvaluator(Evaluator[Noise]):
         cos = F.cosine_similarity(noise.image_embs, self.mean_embds)
         similarity =cos.item()
         normalised_similarity = (similarity +1)/2
-        inversed_similarity = 1 - normalised_similarity
+        inversed_similarity: Evaluation = 1 - normalised_similarity
 
         return inversed_similarity
     
@@ -60,7 +60,7 @@ class MaxPromptCoherenceEvaluator(Evaluator[Noise]):
             text_embs = outputs.text_embeds
             
             similarity = F.cosine_similarity(image_embs, text_embs, dim=-1).item()
-            normalised_similarity = (similarity +1)/2
+            normalised_similarity: Evaluation = (similarity +1)/2
         
         return normalised_similarity
     
