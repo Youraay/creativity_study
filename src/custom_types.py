@@ -16,8 +16,9 @@ type Evaluation = float
 class Noise():
 
     latents: torch.Tensor
+    id: int
     image_embs: torch.Tensor = torch.zeros(1)
-    pil: PIL.Image.Image = PIL.Image.Image()
+    pil: PIL.Image.Image | None = None 
     fitness: float = 0
     scores : List[float] = field(default_factory=list)
     seed: int = 0
@@ -26,6 +27,7 @@ class Noise():
     @classmethod
     def from_seed(cls, 
                   seed: int,
+                  id: int,
                   batch_size : int = 1,
                   num_channels_latents  : int =4 ,
                   vae_scale_factor : int = 8,
@@ -47,7 +49,7 @@ class Noise():
 
         generator = torch.Generator(device=device).manual_seed(seed)
         latents = torch.randn(latents_shape, generator=generator, device=device, dtype=dtype)
-        latents = latents * init_noise_sigma
+        # latents = latents * init_noise_sigma
         
-        return cls(latents=latents, seed=seed, generator=generator)
+        return cls(latents=latents, id=id, seed=seed, generator=generator)
     

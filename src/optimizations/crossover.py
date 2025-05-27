@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Generic
 import torch
-from custom_types import Latents, Argument, Noise
+from ..custom_types import Latents, Argument, Noise
 
 class Crossover(Generic[Argument], ABC):
 
@@ -58,8 +58,8 @@ def uniform_crossover(
 @dataclass
 class ArithmeticCrossover(Crossover[Noise]):
 
-    weight : float
-    proportions : float
+    weight : float =0.5
+    proportions : float = 1.0
 
     def crossover(self, argument1: Noise, argument2: Noise) -> Noise:
 

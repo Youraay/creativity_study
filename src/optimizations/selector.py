@@ -2,11 +2,14 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, List, Dict, Any
-from custom_types import Argument, Result, Fitness, Noise
+from ..custom_types import Argument, Result, Fitness, Noise
 import random
 
 @dataclass
 class SolutionCandidate(Generic[Argument, Result]):
+    """
+    s
+    """
 
     arguments : Argument
     results : Result
@@ -44,7 +47,7 @@ class TournamentSelector(Selector[float]):
      
     def __init__(self,  tournament_size : int) -> None:
         
-        assert tournament_size > 1.0, "Selection Pressure must be greater than 1."
+        assert tournament_size >= 1, "Selection Pressure must be greater than 1."
 
         self.tournament_size = tournament_size
 

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from custom_types import Argument,Argument2, Noise, Evaluation
+from ..custom_types import Argument,Argument2, Noise, Evaluation
 from typing import Generic
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from models.manager import ModelManager
+from ..models.manager import ModelManager
 
 class Evaluator(Generic[Argument] , ABC):
     @abstractmethod
@@ -73,7 +73,7 @@ class MaxQualityEvaluator(Evaluator[Noise]):
                 
         self.blip2_model, self.blip_processor = model_manager.load_blip2()
         
-        self.mean_embds = torch.load(f"mean_embeddings/{mean_embds_file_name}")
+        self.mean_embds = torch.load(f"mean_embeddings/{mean_embds_file_name}.pt")
         
 
     def evaluate(self, noise: Noise) -> Evaluation:

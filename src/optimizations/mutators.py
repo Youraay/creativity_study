@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, Tuple
 import torch
-from custom_types import Latents, Argument
+from ..custom_types import Latents, Argument
 
 
 class Mutator( Generic[Argument], ABC):
