@@ -5,7 +5,7 @@ from src.optimizations.evaluators import MaxMeanDivergenceEvaluator, MaxPromptCo
 from src.optimizations.mutators import UniformGausianMutator
 from src.optimizations.crossover import ArithmeticCrossover, UniformCrossover
 import argparse
-
+from visulisations import plotting
 
 parser = argparse.ArgumentParser(description='Run genetic optimization with configurable components')
 parser.add_argument('--selector', type=str, default='roulette', choices=['tournament', 'rank', 'roulette'], 
@@ -57,7 +57,8 @@ print(type(mutator))
 print(type(crossover))
 for e in evaluators:
     print(type(e))
-
+ts=datetime.now().strftime("%Y%m%d_%H%M%S")
+safe_prompt = self.prompt.replace(" ", "_")
 go = GeneticOptimization(
     generations=10,
     population_size=100,
@@ -67,7 +68,13 @@ go = GeneticOptimization(
     evaluators=evaluators,
     evaluation_weights=evaluation_weights,
     mutator=mutator,
-    crossover_function=crossover
+    crossover_function=crossover, 
+    timestemp = ts
 )
 
-go.run()
+best, generation_map = go.run()
+
+plotting.save_noises_to_csv(generation_map, f"{safe_prompt}_{ts}.csv")
+plotting.generate_umap(generation_map, f"{safe_prompt}_{ts}_u_map")
+plotting.generate_pca(generation_map, f"{safe_prompt}_{ts}_pca")
+plotting.generate_mean_and_standard_deviation(generation_map, f"{safe_prompt}_{ts}_m_and_sd")

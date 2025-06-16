@@ -13,6 +13,8 @@ from datetime import datetime
 import os
 import PIL
 import json
+from typing import Optional, List, Dict, Tuple
+from collections import defaultdict
 class GeneticOptimization():
 
     def __init__ (self,
@@ -25,6 +27,7 @@ class GeneticOptimization():
                   evaluation_weights: List[float],
                   mutator : Mutator[Latents], 
                   crossover_function : Crossover[Noise],
+                  ts:str,
                   base_population: List[Noise] | None = None, 
                   device: Device = "cuda", 
                   initial_mutation_rate: float = 0.1,
@@ -66,6 +69,8 @@ class GeneticOptimization():
         self.strict_osga = strict_osga
 
         self.device = device
+        self.generation_map: Dict[int, List[Noise]] = defaultdict(list)
+        self.timestemp = ts
 
     def save_images(self) -> None:
         """
@@ -83,9 +88,8 @@ class GeneticOptimization():
         Inizialize output folder for this experiment
         """
         safe_prompt = self.prompt.replace(" ", "_")
-        self.timestemp = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_name = f"{safe_prompt}_{self.timestemp}"
-        self.output_path = os.path.join("/scratch/dldevel/sinziri/creativity_study/outputs", folder_name)
+        self.output_path = os.path.join("/scratch/dldevel/sinziri/creativity_study/files", folder_name)
         os.makedirs(self.output_path, exist_ok=True)
 
     def save_config(self) -> None:
@@ -192,18 +196,18 @@ class GeneticOptimization():
         if missing > 0:
             num_channel_latents = self.pipe.unet.config.in_channels
             vae_scale_factor = self.pipe.vae_scale_factor
-            new_population = [Noise.from_seed(random.randint(1, 2**32), id=id, num_channels_latents=num_channel_latents, vae_scale_factor=vae_scale_factor) for id in range(missing)]  
+            new_population = [Noise.from_seed(random.randint(1, 2**32), prompt=self.prompt,id=id, generation=0, num_channels_latents=num_channel_latents, vae_scale_factor=vae_scale_factor) for id in range(missing)]  
             self.population += new_population
             print(f"Base Population with {len(self.population)} Candidates")
 
         for noise in self.population:
             
-            noise.pil = self.generate_image(noise.latents)
+            noise.pil = self.generate_image(noise.noise_embeddings)
             
-            noise.fitness, noise.scores = self.calculate_fitness(noise)
+            self.calculate_fitness(noise)
         print("Base Population created")
 
-    def calculate_fitness(self, noise: Noise) -> Tuple[float, List[float]]:
+    def calculate_fitness(self, noise: Noise):
         """
         Will calculat all evaluation scores and combine them to a weighted sum - the fitness score
 
@@ -214,12 +218,14 @@ class GeneticOptimization():
         fitness: The weighted sum of the evaluation scores for the genetic selection process
         evaluations: for further visualisations and analytics
         """
+        evaluations = dict()
+        for evaluator in self.evaluators:
+            evaluator.evaluate(noise, prompt=self.prompt) 
+            
         
-        evaluations: List[float] = [evaluator.evaluate(noise, prompt=self.prompt) for evaluator in self.evaluators]
+        fitness: float = sum(score * weight for score,  weight in zip(evaluations.values(), self.evaluation_weights))
+        noise.fitness = fitness
         
-        fitness: float = sum(score * weight for score,  weight in zip(evaluations, self.evaluation_weights))
-
-        return fitness, evaluations
 
     def generate_image(self, latents : Latents) -> PIL.Image.Image:
 
@@ -266,25 +272,27 @@ class GeneticOptimization():
             print (f"the population has a size of {len(self.population)}")
             parent1: Noise = self.selector.select(self.population)
 
-            parent2 : Noise | None = None
-            child: Noise | None= None
+            parent2 : Optional[Noise] = None
+            child: Optional[Noise] = None
             crossed = False
             mutated = False
             if random.random() <= self.crossover_rate:
                 parent2 = self.selector.select(self.population)
-                child = self.crossover_function.crossover(parent1, parent2)
+                child = self.crossover_function.crossover(parent1, parent2,self.prompt, self.completed_generations +1)
+                child.parent_embs = [parent1,parent2]
                 crossed = True
             
             else:
                 child= copy.deepcopy(parent1)
+                child.last_appearance = self.completed_generations +1
 
             if random.random() <= self.mutation_rate:
-                child.latents = self.mutator.mutate(child.latents)
+                child.noise_embeddings = self.mutator.mutate(child.noise_embeddings)
                 mutated = True
 
             if crossed or mutated:
-                child.pil = self.generate_image(child.latents)
-                child.fitness, child.scores = self.calculate_fitness(child)
+                child.pil = self.generate_image(child.noise_embeddings)
+                self.calculate_fitness(child)
 
                 max_parent_fitness = max(parent1.fitness, parent2.fitness) if parent2 else parent1.fitness
                 if self.strict_osga:
@@ -295,10 +303,13 @@ class GeneticOptimization():
             else:
                 child_population.append(child)
         
+        self.generation_map[self.completed_generations +1] = child_population
+
+        
         
         self.population = child_population        
 
-    def run(self) -> Noise:
+    def run(self) -> Tuple[Noise,Noise]:
         """
         Runs the Simulation and returns the best Latents
         """
@@ -310,13 +321,13 @@ class GeneticOptimization():
 
 
             for generation in range(self.generations -1):
-                self.save_images()
+                
                 self.perform_generation()
                 self.log_generation_result()
-            self.save_images()
+            
             best = self.best_solution()
 
-            return best
+            return best, self.generation_map
         except Exception as e:
             self.log_error(e)
             raise

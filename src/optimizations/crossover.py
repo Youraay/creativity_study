@@ -8,7 +8,7 @@ from ..custom_types import Latents, Argument, Noise
 class Crossover(Generic[Argument], ABC):
 
     @abstractmethod
-    def crossover(self, argument1: Argument, argument2: Argument) -> Argument:
+    def crossover(self, argument1: Argument, argument2: Argument, prompt:str, generation:int) -> Argument:
         
         raise NotImplementedError("Method is not implementet yet")
     
@@ -61,24 +61,31 @@ class ArithmeticCrossover(Crossover[Noise]):
     weight : float =0.5
     proportions : float = 1.0
 
-    def crossover(self, argument1: Noise, argument2: Noise) -> Noise:
+    def crossover(self, argument1: Noise, argument2: Noise, prompt:str, generation:int) -> Noise:
 
-        return Noise(arithmetic_crossover(
-            argument1.latents,
-            argument2.latents,
-            self.weight,
-            self.proportions, 
-        ))
+        return Noise(prompt=prompt,
+            arithmetic_crossover(
+                argument1.latents,
+                argument2.latents,
+                self.weight,
+                self.proportions, 
+            ),
+            first_appearance=generation,
+            last_appearance=generation
+        )
     
 @dataclass
 class UniformCrossover(Crossover[Noise]):
 
     swap_rate : float
 
-    def crossover(self, argument1: Noise, argument2: Noise):
+    def crossover(self, argument1: Noise, argument2: Noise, prompt:str, generation:int):
 
-        return Noise(uniform_crossover(
-            argument1.latents,
-            argument2.latents,
-            self.swap_rate
-        ))
+        return Noise(prompt=prompt,
+                     uniform_crossover(
+                        argument1.latents,
+                        argument2.latents,
+                        self.swap_rate
+                    ), 
+                    first_appearance= generation,
+                    last_appearance=generation)

@@ -1,5 +1,6 @@
 # types.py
 from typing import TypeVar, Optional, List
+import numpy as np
 import PIL.Image
 import torch
 from dataclasses import dataclass, field
@@ -16,24 +17,26 @@ type Evaluation = float
 @dataclass()
 class Noise():
     prompt: str
-    noise_embeddings: torch.Tensor
-    generator: Optional[torch.Generator] 
+    noise_embeddings: Latents
     first_appearance: int
     last_appearance: int
+    generator: Optional[Latents] = None
     id: int = random.randint(1,2**32)
-    blip_embeddings: Optional[torch.Tensor] = None
-    clip_embeddings: Optional[torch.Tensor] = None
-    image_embs: Optional[torch.Tensor] = None
+    blip_embeddings: Optional[Latents] = None
+    clip_embeddings: Optional[Latents] = None
+    image_embs: Optional[Latents] = None
+    parent_embs: Optional[List['Noise']] = field(default_factory=list)
     pil: Optional[PIL.Image.Image] = None 
     fitness: float = 0
     scores : dict[str,float] = field(default_factory=dict)
+    image_caption = ""
     seed: int = 0
     
 
     @classmethod
     def from_seed(cls, 
                   seed: int,
-                  prompt= str,
+                  prompt:str,
                   id: int,
                   generation: int,
                   batch_size : int = 1,
@@ -59,5 +62,16 @@ class Noise():
         latents = torch.randn(latents_shape, generator=generator, device=device, dtype=dtype)
         # latents = latents * init_noise_sigma
         
-        return cls(noise_embeddings=latents, prompt=prompt id=id, seed=seed, first_appearance = generation, last_appearance= generation, generator=generator)
+        return cls(noise_embeddings=latents, prompt=prompt, id=id, seed=seed, first_appearance = generation, last_appearance= generation, generator=generator)
     
+
+if __name__ == "__main__":
+    device ="cuda" if torch.cuda.is_available() else "cpu"
+    noise = Noise.from_seed(
+        seed=42,
+        prompt='dog',
+        id=1,
+        generation=1,
+        device=device
+    )
+

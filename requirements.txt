@@ -9,3 +9,6 @@ imageio
 pytorch-lightning
 graphviz
 pytest
+umap-learn
+matplotlib
+scikit-learn
