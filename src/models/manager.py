@@ -42,7 +42,8 @@ class ModelManager:
                 "stabilityai/stable-diffusion-xl-base-1.0",
                 torch_dtype=torch.float16, 
                 use_safetensors=True,
-                variant="fp16"
+                variant="fp16",
+                cache_dir="/scratch/dldevel/sinziri/huggingface_models"
             )
         print("sdxl loaded")
         self._sdxl_base.to(self.device)
@@ -61,6 +62,7 @@ class ModelManager:
                 torch_dtype=torch.float16,
                 use_safetensors=True,
                 variant="fp16",
+                cache_dir="/scratch/dldevel/sinziri/huggingface_models"
             )
             
         self._sdxl_refiner.to(self.device)
@@ -86,10 +88,11 @@ class ModelManager:
             self._blip_model = Blip2Model.from_pretrained(
                 "Salesforce/blip2-opt-2.7b",
                 torch_dtype=torch.float16 if self.use_half_precision else torch.float32,
-                device_map="cpu", 
-            )
+                device_map="cuda",
+                cache_dir="/scratch/dldevel/sinziri/huggingface_models"
+            ).to(self.device)
 
-            self._blip_processor = AutoProcessor.from_pretrained("Salesforce/blip2-flan-t5-xl")
+            self._blip_processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b", cache_dir="/scratch/dldevel/sinziri/huggingface_models")
         
         
         return self._blip_model, self._blip_processor
@@ -100,9 +103,10 @@ class ModelManager:
             print("Loading CLIP model...")
             self._clip_model = CLIPModel.from_pretrained(
                 "openai/clip-vit-base-patch32",
-                torch_dtype=torch.float16 if self.use_half_precision else torch.float32
+                torch_dtype=torch.float16 if self.use_half_precision else torch.float32,
+                cache_dir="/scratch/dldevel/sinziri/huggingface_models"
             )
-            self._clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+            self._clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32", cache_dir="/scratch/dldevel/sinziri/huggingface_models")
         
         self._clip_model.to(self.device)
         print("Clip Model Loaded")

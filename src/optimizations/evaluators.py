@@ -19,14 +19,16 @@ class MaxMeanDivergenceEvaluator(Evaluator[Noise]):
         model_manager = ModelManager()
                 
         self.blip2_model, self.blip_processor = model_manager.load_blip2()
+        mean_embds_file_name = mean_embds_file_name.replace(" ", "-")
+        self.mean_embds = torch.load(f"/scratch/dldevel/sinziri/creativity_study/src/mean_embeddings/{mean_embds_file_name}.pt").to("cuda")
         
         
         
 
     def evaluate(self, noise: Noise, *args, **kwargs) -> Evaluation:
-        if not self.mean_embds:
-            self.mean_embds = torch.load(f"mean_embeddings/{kwargs.get("prompt")}.pt")
-        inputs = self.blip_processor(images=noise.pil, return_tensors="pt")
+        
+            
+        inputs = self.blip_processor(images=noise.pil, return_tensors="pt").to("cuda")
         with torch.no_grad():
             outputs =self.blip2_model.get_image_features(**inputs)
             noise.image_embs = outputs.last_hidden_state.mean(dim=1)
@@ -72,7 +74,7 @@ class MaxQualityEvaluator(Evaluator[Noise]):
         model_manager = ModelManager()
                 
         self.blip2_model, self.blip_processor = model_manager.load_blip2()
-        
+        mean_embds_file_name = mean_embds_file_name.replace(" ", "_")
         self.mean_embds = torch.load(f"mean_embeddings/{mean_embds_file_name}.pt")
         
 

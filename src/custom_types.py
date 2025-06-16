@@ -4,6 +4,7 @@ import PIL.Image
 import torch
 from dataclasses import dataclass, field
 import PIL
+import random
 type Device = str
 type Latents = torch.Tensor
 Argument = TypeVar('Argument')
@@ -14,20 +15,27 @@ type Evaluation = float
 
 @dataclass()
 class Noise():
-
-    latents: torch.Tensor
-    id: int
-    image_embs: torch.Tensor = torch.zeros(1)
-    pil: PIL.Image.Image | None = None 
+    prompt: str
+    noise_embeddings: torch.Tensor
+    generator: Optional[torch.Generator] 
+    first_appearance: int
+    last_appearance: int
+    id: int = random.randint(1,2**32)
+    blip_embeddings: Optional[torch.Tensor] = None
+    clip_embeddings: Optional[torch.Tensor] = None
+    image_embs: Optional[torch.Tensor] = None
+    pil: Optional[PIL.Image.Image] = None 
     fitness: float = 0
-    scores : List[float] = field(default_factory=list)
+    scores : dict[str,float] = field(default_factory=dict)
     seed: int = 0
-    generator: torch.Generator | None = None
+    
 
     @classmethod
     def from_seed(cls, 
                   seed: int,
+                  prompt= str,
                   id: int,
+                  generation: int,
                   batch_size : int = 1,
                   num_channels_latents  : int =4 ,
                   vae_scale_factor : int = 8,
@@ -51,5 +59,5 @@ class Noise():
         latents = torch.randn(latents_shape, generator=generator, device=device, dtype=dtype)
         # latents = latents * init_noise_sigma
         
-        return cls(latents=latents, id=id, seed=seed, generator=generator)
+        return cls(noise_embeddings=latents, prompt=prompt id=id, seed=seed, first_appearance = generation, last_appearance= generation, generator=generator)
     

@@ -77,8 +77,8 @@ class UniformCrossover(Crossover[Noise]):
 
     def crossover(self, argument1: Noise, argument2: Noise):
 
-        return uniform_crossover(
+        return Noise(uniform_crossover(
             argument1.latents,
             argument2.latents,
             self.swap_rate
-        )
+        ))

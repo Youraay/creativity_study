@@ -12,6 +12,7 @@ import copy
 from datetime import datetime 
 import os
 import PIL
+import json
 class GeneticOptimization():
 
     def __init__ (self,
@@ -84,9 +85,97 @@ class GeneticOptimization():
         safe_prompt = self.prompt.replace(" ", "_")
         self.timestemp = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_name = f"{safe_prompt}_{self.timestemp}"
-        self.output_path = os.path.join("outputs", folder_name)
+        self.output_path = os.path.join("/scratch/dldevel/sinziri/creativity_study/outputs", folder_name)
         os.makedirs(self.output_path, exist_ok=True)
 
+    def save_config(self) -> None:
+        """
+        Speichert die wichtigsten Konfigurationsparameter in einer JSON-Datei zur Nachvollziehbarkeit des Experiments.
+        Muss nach Erstellung des Output-Ordners aufgerufen werden.
+        """
+        config = {
+            "generations": self.generations,
+            "population_size": self.population_size,
+            "prompt": self.prompt,
+            "image_pipeline": type(self.pipe).__name__,
+            "selector": type(self.selector).__name__,
+            "mutator": type(self.mutator).__name__,
+            "crossover_function": type(self.crossover_function).__name__,
+            "device": self.device,
+            "initial_mutation_rate": self.mutation_rate,
+            "crossover_rate": self.crossover_rate,
+            "elitism_count": self.elitism_count,
+            "strict_osga": self.strict_osga,
+            "evaluation_weights": self.evaluation_weights,
+            "evaluators": [type(e).__name__ for e in self.evaluators],
+            "random_seed": torch.initial_seed(),
+            "timestamp": self.timestemp,
+            "output_path": self.output_path
+        }
+
+        config_path = os.path.join(self.output_path, "config.json")
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=4)
+
+    def log_generation_result(self) -> None:
+        """
+        Appends best fitness and optional metadata of the current generation
+        to the configuration JSON.
+        """
+        log_entry = {
+            "generation": self.completed_generations,
+            "best_fitness": self.best_solution().fitness,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        # Konfigurationsdatei laden
+        config_path = os.path.join(self.output_path, "config.json")
+        
+        if os.path.exists(config_path):
+            with open(config_path, "r") as file:
+                config_data = json.load(file)
+        else:
+            config_data = {}
+
+        # Falls noch kein Log vorhanden, initialisiere es
+        if "generation_log" not in config_data:
+            config_data["generation_log"] = []
+
+        # Füge neuen Eintrag hinzu
+        config_data["generation_log"].append(log_entry)
+
+        # Schreibe alles zurück
+        with open(config_path, "w") as file:
+            json.dump(config_data, file, indent=4)
+
+    def log_error(self, error: Exception) -> None:
+        """
+        Protokolliert einen Fehler in die Konfigurationsdatei.
+        """
+        config_path = os.path.join(self.output_path, "config.json")
+        
+        # Bestehende Konfig laden oder neu initialisieren
+        if os.path.exists(config_path):
+            with open(config_path, "r") as file:
+                config_data = json.load(file)
+        else:
+            config_data = {}
+
+        if "errors" not in config_data:
+            config_data["errors"] = []
+
+        error_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "generation": self.completed_generations
+        }
+
+        config_data["errors"].append(error_entry)
+
+        with open(config_path, "w") as file:
+            json.dump(config_data, file, indent=4)
+            
     def initialize_population(self) -> None:
         """
         Inizialize the start population.
@@ -149,8 +238,8 @@ class GeneticOptimization():
                     prompt=self.prompt,
                     latents = latents,
                     output_type="pil",
-                    num_inference_steps=4,
-                    guidance_scale =0.0
+                    num_inference_steps=50,
+                    guidance_scale =7.5
                     ).images[0]
     
     def best_solution(self) -> Noise:
@@ -213,11 +302,22 @@ class GeneticOptimization():
         """
         Runs the Simulation and returns the best Latents
         """
-        self.initialize_population()
-        self.create_output_folder()
+        try:
+            self.create_output_folder()
+            self.save_config()
+            self.initialize_population()
+            
 
-        for generation in range(self.generations -1):
+
+            for generation in range(self.generations -1):
+                self.save_images()
+                self.perform_generation()
+                self.log_generation_result()
             self.save_images()
-            self.perform_generation()
-        self.save_images()
-        return self.best_solution()
+            best = self.best_solution()
+
+            return best
+        except Exception as e:
+            self.log_error(e)
+            raise
+        
