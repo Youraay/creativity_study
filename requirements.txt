@@ -12,3 +12,4 @@ pytest
 umap-learn
 matplotlib
 scikit-learn
+numpy

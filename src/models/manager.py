@@ -22,6 +22,8 @@ class ModelManager:
         self._sdxl_refiner = None
         self._blip_model = None
         self._blip_processor = None
+        self._blip_g_model = None
+        self._blip_g_processor = None
         self._clip_model = None
         self._clip_processor = None
         self._sdxl_turbo = None
@@ -97,21 +99,21 @@ class ModelManager:
         
         return self._blip_model, self._blip_processor
     
-    def load_blip2_for_generation(self) ->Tuple[Blip2Model, AutoProcessor]:
+    def load_blip2_for_generation(self) ->Tuple[Blip2ForConditionalGeneration, AutoProcessor]:
 
-        if self._blip_model is None:
+        if self._blip_g_model is None:
             print("Loading BLIP-2 model...")
-            self._blip_model = Blip2ForConditionalGeneration.from_pretrained(
+            self._blip_g_model = Blip2ForConditionalGeneration.from_pretrained(
                 "Salesforce/blip2-opt-2.7b",
                 torch_dtype=torch.float16,
                 device_map="cuda" if torch.cuda.is_available() else "cpu", 
                 cache_dir="/scratch/dldevel/sinziri/huggingface_models"
             ).to(self.device)
 
-            self._blip_processor: AutoProcessor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b",cache_dir="/scratch/dldevel/sinziri/huggingface_models")
+            self._blip_g_processor: AutoProcessor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b",cache_dir="/scratch/dldevel/sinziri/huggingface_models")
         
         
-        return self._blip_model, self._blip_processor
+        return self._blip_g_model, self._blip_g_processor
 
     def load_clip(self) -> Tuple[CLIPModel, CLIPProcessor]:
 

@@ -26,11 +26,14 @@ class Noise():
     clip_embeddings: Optional[Latents] = None
     image_embs: Optional[Latents] = None
     parent_embs: Optional[List['Noise']] = field(default_factory=list)
+    parents: Optional[List[int]] = field(default_factory=list)
     pil: Optional[PIL.Image.Image] = None 
     fitness: float = 0
     scores : dict[str,float] = field(default_factory=dict)
     image_caption = ""
     seed: int = 0
+    mutated: bool = False
+    crossed: bool = True
     
 
     @classmethod
@@ -48,7 +51,7 @@ class Noise():
                   device : Device = 'cuda',
                   dtype = torch.float16):
         
-        assert seed > 0, "Seed must be grater than 0"
+        assert seed > 0, "Seed must be greater than 0"
         generator = torch.Generator(device).manual_seed(seed)
 
         latents_shape = (
@@ -60,7 +63,7 @@ class Noise():
 
         generator = torch.Generator(device=device).manual_seed(seed)
         latents = torch.randn(latents_shape, generator=generator, device=device, dtype=dtype)
-        # latents = latents * init_noise_sigma
+        latents = latents * init_noise_sigma
         
         return cls(noise_embeddings=latents, prompt=prompt, id=id, seed=seed, first_appearance = generation, last_appearance= generation, generator=generator)
     
