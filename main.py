@@ -20,6 +20,7 @@ parser.add_argument('--prompt', type=str, default='courage', help='Prompt to use
 parser.add_argument('--model', type=str, default='sdxl', choices=['sdxl', 'sdxlt'], help='Prompt to use')
 parser.add_argument('--guidance', type=float, default=None, 
                     help='Guidance scale for image generation (uses model default if not specified)')
+parser.add_argument('--job', type=str, default="")
 args = parser.parse_args()
 prompt = args.prompt
 
@@ -34,6 +35,7 @@ else:
     num_steps = 50
     guidance = 7.0
 guidance = args.guidance if args.guidance is not None else guidance
+
 if args.selector == 'tournament':
     selector = TournamentSelector(2) 
 elif args.selector == 'rank':
@@ -89,13 +91,14 @@ go = GeneticOptimization(
     population_size=100,
     prompt=prompt,
     image_pipeline=model,
+    job_id=args.job,
     selector=selector,
     evaluators=evaluators,
     evaluation_weights=evaluation_weights,
     mutator=mutator,
     crossover_function=crossover, 
     ts = ts,
-    elitism_count=0,  
+    elitism_count=2,  
     strict_osga=False,
     crossover_rate=0.9, 
     initial_mutation_rate=0.05,

@@ -133,37 +133,82 @@ class UniformCrossover(Crossover[Noise]):
                     last_appearance=generation)
     
 
-def quartered_crossover(n1: torch.Tensor,
-                        n2: torch.Tensor,
-                        blend: bool = False,
-                        width: int = 8) -> torch.Tensor:
+def quartered_crossover(
+    n1: torch.Tensor,
+    n2: torch.Tensor,
+    blend: bool = False,
+    width: int = 8,
+) -> torch.Tensor:
+    """
+    - Für Sequenz-Latents [L, …] wird wie bisher entlang der 1. Achse geviertelt.
+    - Für Bild-Latents [B, C, H, W] werden die vier räumlichen Quadranten getauscht.
+    """
     if n1.shape != n2.shape:
-        raise ValueError("Shapes differ")
+        raise ValueError("Input tensors must have identical shape")
 
-    L = n1.shape[0]
-    q = L // 4
+    # ----------------- FALL A: 4-D Latent  [B, C, H, W] -----------------
+    if n1.ndim == 4:
+        _, _, H, W = n1.shape
+        h_mid, w_mid = H // 2, W // 2
 
-    # --- harter Schnitt ----------------------------------------------------
-    if not blend or width == 0:
-        child = torch.cat((n1[:q],
-                           n2[q:2*q],
-                           n1[2*q:3*q],          # <- hier wieder n1
-                           n2[3*q:]), dim=0).clone()  # clone() = garantiert neues Memory
+        child = n1.clone()  # eigenes Memory
+
+        # ---------- harter Schnitt ----------
+        if not blend or width == 0:
+            child[:, :, :h_mid, :w_mid] = n2[:, :, :h_mid, :w_mid]   # oben links
+            child[:, :, h_mid:, w_mid:] = n2[:, :, h_mid:, w_mid:]   # unten rechts
+            return child
+
+        # ---------- weiches Blending ----------
+        w2 = width // 2
+
+        # vertikale Übergangszone (≈ horizontaler Schnitt)
+        v_alpha = torch.linspace(1.0, 0.0, steps=2 * w2,
+                                 device=n1.device, dtype=n1.dtype).view(1, 1, -1, 1)
+        h_slice = slice(h_mid - w2, h_mid + w2)
+        child[:, :, h_slice, :] = (
+            v_alpha * n1[:, :, h_slice, :] +
+            (1 - v_alpha) * n2[:, :, h_slice, :]
+        )
+
+        # horizontale Übergangszone (≈ vertikaler Schnitt)
+        h_alpha = torch.linspace(1.0, 0.0, steps=2 * w2,
+                                 device=n1.device, dtype=n1.dtype).view(1, 1, 1, -1)
+        w_slice = slice(w_mid - w2, w_mid + w2)
+        child[:, :, :, w_slice] = (
+            h_alpha * child[:, :, :, w_slice] +   # bereits vertikal gemischt!
+            (1 - h_alpha) * n2[:, :, :, w_slice]
+        )
+
         return child
 
-    # --- weiches Blending --------------------------------------------------
-    def blend_zone(a, b, w):
-        α = torch.linspace(1, 0, w, device=a.device).unsqueeze(1)
-        return α * a + (1 - α) * b
+    # ----------------- FALL B: Sequenz-Latent  [L, D] -----------------
+    L = n1.shape[0]
+    q = L // 4
+    if q == 0:
+        raise ValueError("Tensor zu kurz, um entlang der 1. Achse zu vierteln")
 
+    if not blend or width == 0:
+        return torch.cat(
+            (n1[:q], n2[q:2 * q], n1[2 * q:3 * q], n2[3 * q:]),
+            dim=0,
+        ).clone()
+
+    # lineares Blending wie zuvor (jetzt 1-D Masken)
     w2 = width // 2
+
+    def blend_zone(a, b):
+        alpha = torch.linspace(1.0, 0.0, steps=width,
+                               device=a.device, dtype=a.dtype).view(width, *([1] * (a.ndim - 1)))
+        return alpha * a + (1 - alpha) * b
+
     a1 = n1[:q - w2]
-    ab = blend_zone(n1[q - w2:q + w2], n2[q - w2:q + w2], width)
-    b1 = n2[q + w2:2*q - w2]
-    bc = blend_zone(n2[2*q - w2:2*q + w2], n1[2*q - w2:2*q + w2], width)  # <-- gefixt
-    c1 = n1[2*q + w2:3*q - w2]
-    cd = blend_zone(n1[3*q - w2:3*q + w2], n2[3*q - w2:3*q + w2], width)
-    d1 = n2[3*q + w2:]
+    ab = blend_zone(n1[q - w2:q + w2], n2[q - w2:q + w2])
+    b1 = n2[q + w2:2 * q - w2]
+    bc = blend_zone(n2[2 * q - w2:2 * q + w2], n1[2 * q - w2:2 * q + w2])
+    c1 = n1[2 * q + w2:3 * q - w2]
+    cd = blend_zone(n1[3 * q - w2:3 * q + w2], n2[3 * q - w2:3 * q + w2])
+    d1 = n2[3 * q + w2:]
 
     return torch.cat((a1, ab, b1, bc, c1, cd, d1), dim=0).clone()
 

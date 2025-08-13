@@ -64,6 +64,7 @@ class GeneticOptimization():
                   population_size: int,
                   prompt: str,
                   image_pipeline : StableDiffusionXLPipeline, 
+                  job_id: str,
                   selector: Selector[float],
                   evaluators: List[Evaluator[Noise]],
                   evaluation_weights: List[float],
@@ -87,9 +88,10 @@ class GeneticOptimization():
         if base_population:
             assert len(base_population) <= population_size, "Base Population must not exceed population size"
 
-        # random.seed(random_seed)
-        # torch.manual_seed(random_seed)
+        random.seed(random_seed)
+        torch.manual_seed(random_seed)
         self.next_id = 1
+        self.job_id = job_id
         model_manager = ModelManager()
         self.blip2_model, self.blip_processor = model_manager.load_blip2()
 
@@ -177,7 +179,7 @@ class GeneticOptimization():
         for i in self.evaluators:
             evs += i.name
             evs += "_"
-        folder_name = f"{safe_prompt}_{self.crossover_function.name}_{self.selector.name}_{evs}{self.timestemp}"
+        folder_name = f"{self.job_id}_{safe_prompt}_{self.crossover_function.name}_{self.selector.name}_{evs}"
         self.output_path = os.path.join("/scratch/dldevel/sinziri/creativity_study/files", folder_name)
         os.makedirs(self.output_path, exist_ok=True)
         self.logger.info(f"Directory created: {self.output_path}")
@@ -401,6 +403,7 @@ class GeneticOptimization():
             
             
             if random.random() <= self.crossover_rate:
+                parent2 = self.selector.select(self.population)
                 while parent2 is parent1:
                     parent2 = self.selector.select(self.population)
                 if parent2.fitness > parent1.fitness:
@@ -480,7 +483,7 @@ class GeneticOptimization():
             
             self.logger.debug(f"Image {len(child_population)} of {self.population_size} for Generation {self.completed_generations}")
         
-        self.generation_map[self.completed_generations] = list(child_population)
+        self.generation_map[self.completed_generations] = copy.deepcopy(self.population)
        
     def run(self) -> Tuple[Dict[int, List[Noise]], str]:
         """
@@ -493,8 +496,8 @@ class GeneticOptimization():
             
             self.save_images()
             self.save_noises()
-            self.generation_map[self.completed_generations] = self.population
-            for generation in range(self.generations -1):
+            self.generation_map[self.completed_generations] = copy.deepcopy(self.population)
+            for generation in range(self.generations):
                 
                 self.perform_generation()
                 self.log_generation_result()
